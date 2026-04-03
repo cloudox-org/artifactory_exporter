@@ -1,0 +1,38 @@
+name: RPM builds for EL8, EL9 and EL10
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-rpms:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Building RPMS
+        run: |
+          sudo ln -sf /usr/bin/podman /usr/bin/docker
+          make all
+
+      - name: Deploying RPMS
+        if: github.ref == 'refs/heads/main'
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.REPO_SERVER }}
+          username: ${{ secrets.SSH_USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          source: "./el10/*.rpm,./el9/*.rpm,./el8/*.rpm"
+          target: ~/
